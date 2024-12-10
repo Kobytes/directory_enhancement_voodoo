@@ -66,18 +66,17 @@ chmod +x ~/scripts/dev-tools.sh
 
 ```bash
 dev() {
-    # Fonction pour récupérer le base_dir
-    get_base_dir() {
-        local config_file="$HOME/Dev/tools/configs/base_path"
-        if [ -f "$config_file" ]; then
-            cat "$config_file"
-        else
-            echo "$HOME/Dev"
-        fi
-    }
+    # load state
+    state_file_name="dev-tools"
+    state_file="$HOME/.local/state/$state_file_name"
+    if [ -f "$state_file" ]; then
+      source "$state_file"
+    else
+      get_base_dir="$HOME/Dev"
+    fi
 
     if [ "$1" = "goto" ] && [ -n "$2" ]; then
-        local base_dir=$(get_base_dir)
+        local base_dir=$get_base_dir
         local found=false
         local project_path=""
         local folders=(
@@ -106,7 +105,7 @@ dev() {
             return 1
         fi
     else
-        "$(get_base_dir)/tools/scripts/dev-tools.sh" "$@"
+        "$get_base_dir/tools/scripts/dev-tools.sh" "$@"
     fi
 }
 ```
