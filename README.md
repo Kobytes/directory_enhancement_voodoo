@@ -66,7 +66,7 @@ chmod +x ~/scripts/dev-tools.sh
 
 ```bash
 dev() {
-    # load config
+    # load state
     state_file_name="dev-tools"
     state_file="$HOME/.local/state/$state_file_name"
     if [ -f "$state_file" ]; then

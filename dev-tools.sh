@@ -198,7 +198,7 @@ EOL
     echo
     echo -e "${CYAN}# Configuration pour dev-tools"
     echo "dev() {"
-    echo "    # load config"
+    echo "    # load state"
     echo "    state_file_name=\"dev-tools\""
     echo "    state_file=\"$HOME/.local/state/$state_file_name\""
     echo "    if [ -f \"$state_file\" ]; then"
@@ -618,7 +618,7 @@ show_help() {
 }
 
 
-# load config
+# load state
 state_file_name="dev-tools"
 state_file="$HOME/.local/state/$state_file_name"
 if [ -f "$state_file" ]; then
