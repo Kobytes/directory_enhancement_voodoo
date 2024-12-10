@@ -5,12 +5,14 @@ DEV est un outil en ligne de commande conçu pour simplifier et standardiser l'o
 ## ✨ Caractéristiques
 
 ### 📁 Organisation Structurée
+
 - Structure de dossiers standardisée pour tous vos projets
 - Séparation claire entre projets actifs, archivés, et apprentissage
 - Gestion automatisée des forks GitHub
 - Organisation intuitive des outils et configurations
 
 ### 🛠️ Gestion des Environnements
+
 - Intégration native avec [mise](https://mise.jdx.dev/) pour la gestion des versions
 - Support pour de nombreux langages et environnements :
   - JavaScript : Node.js, Bun, Deno
@@ -22,12 +24,14 @@ DEV est un outil en ligne de commande conçu pour simplifier et standardiser l'o
 ### 🚀 Fonctionnalités
 
 - **Gestion de Projets**
+
   - Création de projets avec templates (Next.js, Node.js, Bun)
   - Navigation rapide entre les projets
   - Système d'archivage intégré
   - Recherche globale dans les projets
 
 - **Intégration GitHub**
+
   - Clonage intelligent (différenciation contributions/références)
   - Configuration automatique des dépôts
   - Organisation des forks
@@ -40,15 +44,18 @@ DEV est un outil en ligne de commande conçu pour simplifier et standardiser l'o
 ## 🚀 Installation
 
 ### Méthode 1 : Clone depuis GitHub
+
 ```bash
 git clone https://github.com/Kobytes/directory_enhancement_voodoo.git
 cd directory_enhancement_voodoo
-chmod +x install.sh
-./install.sh
+chmod +x dev-tools.sh
+./dev-tools.sh
 ```
 
 ### Méthode 2 : Installation manuelle
+
 1. Clonez le script dans votre dossier de scripts :
+
 ```bash
 mkdir -p ~/scripts
 curl -o ~/scripts/dev-tools.sh https://raw.githubusercontent.com/Kobytes/directory_enhancement_voodoo/main/dev-tools.sh
@@ -56,6 +63,7 @@ chmod +x ~/scripts/dev-tools.sh
 ```
 
 2. Ajoutez la fonction suivante à votre `.bashrc` ou `.zshrc` :
+
 ```bash
 dev() {
     # Fonction pour récupérer le base_dir
@@ -104,6 +112,7 @@ dev() {
 ```
 
 3. Initialisez l'environnement :
+
 ```bash
 dev init
 ```
@@ -111,6 +120,7 @@ dev init
 ## 📖 Utilisation
 
 ### Configuration Initiale
+
 ```bash
 # Initialisation de base
 dev init
@@ -123,6 +133,7 @@ dev configure-github <username>
 ```
 
 ### Gestion des Projets
+
 ```bash
 # Création de projet
 dev create-project mon-projet personal next
@@ -141,6 +152,7 @@ dev archive ancien-projet
 ```
 
 ### Gestion des Environnements
+
 ```bash
 # Installation d'environnements
 dev setup-env node 18
@@ -149,6 +161,7 @@ dev setup-env bun latest
 ```
 
 ### Utilitaires
+
 ```bash
 # Recherche
 dev search "terme"
@@ -185,6 +198,7 @@ Dev/
 ## 🤝 Contribution
 
 Les contributions sont les bienvenues ! N'hésitez pas à :
+
 - Signaler des bugs
 - Proposer des nouvelles fonctionnalités
 - Soumettre des pull requests
