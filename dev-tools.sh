@@ -12,19 +12,10 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-# Configuration et utilitaires
-get_base_dir() {
-    local config_file="$HOME/Dev/tools/configs/base_path"
-    if [ -f "$config_file" ]; then
-        cat "$config_file"
-    else
-        echo "$HOME/Dev"
-    fi
-}
 
 # Validation du dossier Dev
 validate_dev_directory() {
-    local base_dir=$(get_base_dir)
+    local base_dir=$get_base_dir
     if [ ! -d "$base_dir" ]; then
         echo -e "${RED}Le dossier Dev n'existe pas. Exécutez 'dev init' d'abord.${NC}"
         return 1
@@ -32,7 +23,7 @@ validate_dev_directory() {
 }
 
 get_github_username() {
-    local config_file="$(get_base_dir)/tools/configs/github_username"
+    local config_file="$get_base_dir/tools/configs/github_username"
     if [ -f "$config_file" ]; then
         cat "$config_file"
     else
@@ -42,11 +33,18 @@ get_github_username() {
 
 configure_github() {
     local github_username=$1
-    local config_dir="$(get_base_dir)/tools/configs"
+    local config_dir="$get_base_dir/tools/configs"
     
     mkdir -p "$config_dir"
     echo "$github_username" > "$config_dir/github_username"
     echo -e "${GREEN}GitHub username configuré: $github_username${NC}"
+}
+
+save_dev_directory() {
+  if [ -e "$state_file" ]; then
+     sed -i '/^get_base_dir/d' $state_file
+  fi
+    echo "get_base_dir=$base_dir" >> $state_file
 }
 
 init_dev_directory() {
@@ -57,9 +55,10 @@ init_dev_directory() {
         base_dir="$HOME/Dev"
         echo -e "${BLUE}Initialisation du dossier Dev dans l'emplacement par défaut: $base_dir${NC}"
     else
-        base_dir="$custom_path/Dev"
+        base_dir=$(realpath "$custom_path/Dev")
         echo -e "${BLUE}Initialisation du dossier Dev dans: $base_dir${NC}"
     fi
+    save_dev_directory "$base_dir"
 
     echo -e "${YELLOW}Création de la structure des dossiers...${NC}"
     mkdir -p "$base_dir"/{projects/{active,archived,ideas},learning/{tutorials,experiments,courses},forks/{contributions,reference},tools/{scripts,configs},sandbox/temp}
@@ -210,7 +209,7 @@ EOL
     echo "    }"
     echo
     echo "    if [ \"\$1\" = \"goto\" ] && [ -n \"\$2\" ]; then"
-    echo "        local base_dir=\$(get_base_dir)"
+    echo "        local base_dir=\$get_base_dir"
     echo "        local found=false"
     echo "        local project_path=\"\""
     echo "        local folders=("
@@ -239,7 +238,7 @@ EOL
     echo "            return 1"
     echo "        fi"
     echo "    else"
-    echo "        \"\$(get_base_dir)/tools/scripts/dev-tools.sh\" \"\$@\""
+    echo "        \"\$get_base_dir/tools/scripts/dev-tools.sh\" \"\$@\""
     echo "    fi"
     echo "}"
     echo -e "${NC}"
@@ -299,7 +298,7 @@ create_project() {
     local project_name=$1
     local project_type=$2
     local template=$3
-    local base_dir=$(get_base_dir)
+    local base_dir=$get_base_dir
     local target_dir
     
     case $project_type in
@@ -362,7 +361,7 @@ create_project() {
 
 goto_project() {
     local project_name=$1
-    local base_dir=$(get_base_dir)
+    local base_dir=$get_base_dir
     local found=false
     local project_path=""
 
@@ -396,7 +395,7 @@ goto_project() {
 
 archive_project() {
     local project_name=$1
-    local base_dir=$(get_base_dir)
+    local base_dir=$get_base_dir
     
     if [ -d "$base_dir/projects/active/$project_name" ]; then
         mv "$base_dir/projects/active/$project_name" "$base_dir/projects/archived/"
@@ -407,7 +406,7 @@ archive_project() {
 }
 
 list_projects() {
-    local base_dir=$(get_base_dir)
+    local base_dir=$get_base_dir
     local category=$1
 
     echo -e "${BLUE}=== Listage des projets ===${NC}"
@@ -441,7 +440,7 @@ list_projects() {
 
 search_projects() {
     local search_term=$1
-    local base_dir=$(get_base_dir)
+    local base_dir=$get_base_dir
     
     echo -e "${BLUE}Recherche de '$search_term' dans les projets...${NC}"
     
@@ -457,7 +456,7 @@ search_projects() {
 clone_github() {
     local repo_url=$1
     local repo_name=$(basename "$repo_url" .git)
-    local base_dir=$(get_base_dir)
+    local base_dir=$get_base_dir
     local github_user=$(echo "$repo_url" | grep -oP 'github.com/\K[^/]+')
     local configured_user=$(get_github_username)
     
@@ -487,7 +486,7 @@ clone_github() {
 }
 
 backup_dev() {
-    local base_dir=$(get_base_dir)
+    local base_dir=$get_base_dir
     local backup_dir="$HOME/Dev_backups/backup_$(date +%Y%m%d_%H%M%S)"
     mkdir -p "$backup_dir"
     
@@ -504,7 +503,7 @@ backup_dev() {
 }
 
 clean_node_modules() {
-    local base_dir=$(get_base_dir)
+    local base_dir=$get_base_dir
     local space_before=$(du -sh "$base_dir" | cut -f1)
     
     find "$base_dir" -name "node_modules" -type d -prune -exec rm -rf '{}' +
@@ -619,6 +618,16 @@ show_help() {
     echo "  clean                           - Nettoie les node_modules"
     echo "  version                         - Affiche la version du script"
 }
+
+
+# load config
+state_file_name="dev-tools"
+state_file="$HOME/.local/state/$state_file_name"
+if [ -f "$state_file" ]; then
+  source "$state_file"
+else
+  get_base_dir="$HOME/Dev"
+fi
 
 # Menu principal
 case $1 in
