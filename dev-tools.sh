@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version du script
-VERSION="1.0.0"
+VERSION="1.0.2"
 
 # Couleurs pour les outputs
 RED='\033[0;31m'
@@ -69,22 +69,25 @@ init_dev_directory() {
     echo "$base_dir" > "$config_dir/base_path"
 
     if ! command -v mise &> /dev/null; then
-        echo -e "${YELLOW}Installation de mise...${NC}"
-        curl https://mise.run | sh
-        
-        if [ -f "$HOME/.bashrc" ]; then
-            if ! grep -q "mise activate bash" "$HOME/.bashrc"; then
-                echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc
-                echo 'eval "$(mise completion bash)"' >> ~/.bashrc
-            fi
-        fi
-        if [ -f "$HOME/.zshrc" ]; then
-            if ! grep -q "mise activate zsh" "$HOME/.zshrc"; then
-                echo 'eval "$(~/.local/bin/mise activate zsh)"' >> ~/.zshrc
-                echo 'eval "$(mise completion zsh)"' >> ~/.zshrc
-            fi
+    echo -e "${YELLOW}Installation de mise...${NC}"
+    curl https://mise.run | sh
+    
+    echo -e "${YELLOW}Configuration de mise trust...${NC}"
+    mise trust
+    
+    if [ -f "$HOME/.bashrc" ]; then
+        if ! grep -q "mise activate bash" "$HOME/.bashrc"; then
+            echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc
+            echo 'eval "$(mise completion bash)"' >> ~/.bashrc
         fi
     fi
+    if [ -f "$HOME/.zshrc" ]; then
+        if ! grep -q "mise activate zsh" "$HOME/.zshrc"; then
+            echo 'eval "$(~/.local/bin/mise activate zsh)"' >> ~/.zshrc
+            echo 'eval "$(mise completion zsh)"' >> ~/.zshrc
+        fi
+    fi
+fi
 
     cat > "$base_dir/.mise.toml" << EOL
 [env]
@@ -100,6 +103,8 @@ list = "dev list all"
 backup = "dev backup"
 clean = "dev clean"
 EOL
+
+mise trust "$base_dir/.mise.toml"
 
     cat > "$base_dir/.gitignore" << EOL
 # Dependencies
@@ -188,8 +193,57 @@ EOL
 
     echo -e "${GREEN}✓ Structure Dev créée avec succès${NC}"
     echo -e "${YELLOW}Configuration requise :${NC}"
-    echo -e "1. ${BLUE}Ajoutez cet alias à votre .bashrc ou .zshrc :${NC}"
-    echo -e "   ${CYAN}alias dev='$base_dir/tools/scripts/dev-tools.sh'${NC}"
+    echo -e "1. ${BLUE}Ajoutez la fonction suivante dans votre fichier de configuration shell :${NC}"
+    echo -e "   ${BLUE}Pour bash : ~/.bashrc${NC}"
+    echo -e "   ${BLUE}Pour zsh  : ~/.zshrc${NC}"
+    echo
+    echo -e "${CYAN}# Configuration pour dev-tools"
+    echo "dev() {"
+    echo "    # Fonction pour récupérer le base_dir"
+    echo "    get_base_dir() {"
+    echo "        local config_file=\"\$HOME/Dev/tools/configs/base_path\""
+    echo "        if [ -f \"\$config_file\" ]; then"
+    echo "            cat \"\$config_file\""
+    echo "        else"
+    echo "            echo \"\$HOME/Dev\""
+    echo "        fi"
+    echo "    }"
+    echo
+    echo "    if [ \"\$1\" = \"goto\" ] && [ -n \"\$2\" ]; then"
+    echo "        local base_dir=\$(get_base_dir)"
+    echo "        local found=false"
+    echo "        local project_path=\"\""
+    echo "        local folders=("
+    echo "            \"projects/active\""
+    echo "            \"projects/archived\""
+    echo "            \"learning/experiments\""
+    echo "            \"learning/tutorials\""
+    echo "            \"forks/contributions\""
+    echo "            \"forks/reference\""
+    echo "        )"
+    echo
+    echo "        for folder in \"\${folders[@]}\"; do"
+    echo "            if [ -d \"\$base_dir/\$folder/\$2\" ]; then"
+    echo "                found=true"
+    echo "                project_path=\"\$base_dir/\$folder/\$2\""
+    echo "                break"
+    echo "            fi"
+    echo "        done"
+    echo
+    echo "        if [ \"\$found\" = true ]; then"
+    echo "            cd \"\$project_path\""
+    echo "            echo -e \"\\033[0;32mDéplacé vers: \$project_path\\033[0m\""
+    echo "            return 0"
+    echo "        else"
+    echo "            echo -e \"\\033[0;31mProjet '\$2' non trouvé\\033[0m\""
+    echo "            return 1"
+    echo "        fi"
+    echo "    else"
+    echo "        \"\$(get_base_dir)/tools/scripts/dev-tools.sh\" \"\$@\""
+    echo "    fi"
+    echo "}"
+    echo -e "${NC}"
+    echo
     echo -e "2. ${BLUE}Redémarrez votre terminal ou exécutez :${NC}"
     echo -e "   ${CYAN}source ~/.bashrc${NC} ${BLUE}ou${NC} ${CYAN}source ~/.zshrc${NC}"
     
@@ -198,13 +252,56 @@ EOL
     chmod +x "$base_dir/tools/scripts/dev-tools.sh"
 }
 
+check_environment() {
+    local env_type=$1
+    local version=${2:-latest}
+    
+    if ! command -v mise &> /dev/null; then
+        echo -e "${RED}mise n'est pas installé. Installation nécessaire.${NC}"
+        return 1
+    fi
+    
+    if ! mise which "$env_type" &> /dev/null; then
+        read -p "L'environnement $env_type n'est pas installé. Voulez-vous l'installer ? (Y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+            mise use --global "$env_type@$version"
+            
+            # Recharge l'environnement mise
+            eval "$(~/.local/bin/mise activate bash)"
+            
+            # Vérifie si l'installation a réussie
+            if ! command -v "$env_type" &> /dev/null; then
+                echo -e "${YELLOW}Installation réussie mais redémarrage du shell nécessaire.${NC}"
+                echo -e "${YELLOW}Veuillez exécuter :${NC}"
+                echo -e "${CYAN}source ~/.bashrc${NC} ${BLUE}ou${NC} ${CYAN}source ~/.zshrc${NC}"
+                echo -e "${YELLOW}puis réessayez la commande.${NC}"
+                return 1
+            fi
+        else
+            echo -e "${RED}Installation annulée. Impossible de continuer.${NC}"
+            return 1
+        fi
+    fi
+    
+    # Double vérification que la commande est disponible
+    if ! command -v "$env_type" &> /dev/null; then
+        echo -e "${YELLOW}L'environnement $env_type n'est pas activé.${NC}"
+        echo -e "${YELLOW}Veuillez exécuter :${NC}"
+        echo -e "${CYAN}source ~/.bashrc${NC} ${BLUE}ou${NC} ${CYAN}source ~/.zshrc${NC}"
+        return 1
+    fi
+    
+    return 0
+}
+
 create_project() {
     local project_name=$1
     local project_type=$2
+    local template=$3
     local base_dir=$(get_base_dir)
     local target_dir
-    local template=$3
-
+    
     case $project_type in
         "personal")
             target_dir="$base_dir/projects/active/$project_name"
@@ -219,6 +316,18 @@ create_project() {
             echo -e "${RED}Type de projet invalide. Utilisez: personal, learn, ou fork${NC}"
             return 1
     esac
+
+    # Vérification de l'environnement avant la création
+    if [ -n "$template" ]; then
+        case $template in
+            "next"|"node")
+                check_environment "node" || return 1
+                ;;
+            "bun")
+                check_environment "bun" || return 1
+                ;;
+        esac
+    fi
 
     mkdir -p "$target_dir"
     cd "$target_dir"
@@ -249,6 +358,40 @@ create_project() {
     fi
 
     echo -e "${GREEN}Projet créé dans: $target_dir${NC}"
+}
+
+goto_project() {
+    local project_name=$1
+    local base_dir=$(get_base_dir)
+    local found=false
+    local project_path=""
+
+    # Recherche dans tous les dossiers possibles
+    local folders=(
+        "projects/active"
+        "projects/archived"
+        "learning/experiments"
+        "learning/tutorials"
+        "forks/contributions"
+        "forks/reference"
+    )
+
+    for folder in "${folders[@]}"; do
+        if [ -d "$base_dir/$folder/$project_name" ]; then
+            found=true
+            project_path="$base_dir/$folder/$project_name"
+            break
+        fi
+    done
+
+    if [ "$found" = true ]; then
+        cd "$project_path"
+        echo -e "${GREEN}Déplacé vers: $project_path${NC}"
+        return 0
+    else
+        echo -e "${RED}Projet '$project_name' non trouvé${NC}"
+        return 1
+    fi
 }
 
 archive_project() {
@@ -385,21 +528,21 @@ setup_environment() {
     esac
 
     if ! command -v mise &> /dev/null; then
-        echo -e "${YELLOW}Installation de mise...${NC}"
-        curl https://mise.run | sh
-        
-        if [ -f "$HOME/.bashrc" ]; then
-            echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc
-            echo 'eval "$(mise completion bash)"' >> ~/.bashrc
-        fi
-        if [ -f "$HOME/.zshrc" ]; then
-            echo 'eval "$(~/.local/bin/mise activate zsh)"' >> ~/.zshrc
-            echo 'eval "$(mise completion zsh)"' >> ~/.zshrc
-        fi
-        
-        echo -e "${YELLOW}Redémarrez votre terminal ou exécutez 'source ~/.bashrc' ou 'source ~/.zshrc'${NC}"
-        return
+    echo -e "${YELLOW}Installation de mise...${NC}"
+    curl https://mise.run | sh
+    
+    if [ -f "$HOME/.bashrc" ]; then
+        echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc
+        echo 'eval "$(mise completion bash)"' >> ~/.bashrc
     fi
+    if [ -f "$HOME/.zshrc" ]; then
+        echo 'eval "$(~/.local/bin/mise activate zsh)"' >> ~/.zshrc
+        echo 'eval "$(mise completion zsh)"' >> ~/.zshrc
+    fi
+    
+    echo -e "${YELLOW}Redémarrez votre terminal ou exécutez 'source ~/.bashrc' ou 'source ~/.zshrc'${NC}"
+    return
+fi
 
     if [ -z "$version" ]; then
         echo -e "${BLUE}Configuration de $env_type (dernière version)${NC}"
@@ -457,6 +600,7 @@ show_help() {
     echo "    Templates: next, node, bun"
     echo "  archive <project-name>          - Archive un projet actif"
     echo "  list <category>                 - Liste les projets (active/archived/learning/all)"
+    echo "  goto <project-name>             - Se déplace vers le dossier du projet"
     echo
     echo -e "${CYAN}Environnements (mise)${NC}"
     echo "  setup-env <type> [version]      - Configure un environnement de développement"
@@ -507,6 +651,12 @@ case $1 in
         ;;
     "clean")
         validate_dev_directory && clean_node_modules
+        ;;
+    "goto")
+        validate_dev_directory && goto_project "$2"
+        ;;
+    "completion")
+        generate_completion
         ;;
     "version")
         echo -e "${BLUE}DEV version ${VERSION}${NC}"
